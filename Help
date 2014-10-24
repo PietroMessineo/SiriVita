@@ -1,0 +1,224 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""
+---------------------------------------------------------------------
+Authors :
+Created by Ed Emond
+Translated by Pietro Messineo
+---------------------------------------------------------------------
+About :
+Use this plugin to ask questions about Contacts
+---------------------------------------------------------------------
+Usage :
+What's <contact> <attribute>name|telephone|telephone number|phone number|email|email address|address|birthday
+
+What's my name (smalltalk)
+What's my name|telephone|email|address|birthday (contact)
+What's my wife's name|telephone|email|address|birthday (contact) My Wife is a Contact Nickname
+What's tom's name|telephone|email|address|birthday (contact) All tom found in Contacts
+-------------------------------------------------------------------
+Instalation :
+Just create folder called "contact" in your plugins directory, and place 
+this file into it. Then add "contact" to your plugins.conf
+---------------------------------------------------------------------
+IMPORTANT :
+You MUST download the newest version of SiriServerCore.
+---------------------------------------------------------------------
+Changelog :
+v1.0 (30th April 2012) - initial release
+"""
+
+from plugin import *
+from siriObjects.baseObjects import ObjectIsCommand
+from siriObjects.contactObjects import ABPersonSearch, ABPersonSearchCompleted, ABPerson, Person
+from siriObjects.systemObjects import DomainObjectRetrieve, DomainObjectRetrieveCompleted, \
+     DomainObjectUpdate, DomainObjectUpdateCompleted, DomainObjectCommit, DomainObjectCommitCompleted
+
+numberTypesLocalized = {
+'_$!<Mobile>!$_': {'it-IT': u"Telefono", 'de-DE': u"Handynummer"},
+'_$!<iPhone>!$_': {'it-IT': u"iPhone", 'de-DE': u"iPhone-Nummer"},
+'_$!<Home>!$_': {'it-IT': u"casa", 'de-DE': u"Privatnummer"},
+'_$!<Work>!$_': {'it-IT': u"lavoro", 'de-DE': u"Geschaftsnummer"},
+#'_$!<Work>!$_': {'it-IT': u"lavoro", 'de-DE': u"Gesch‰ftsnummer"}
+'_$!<Main>!$_': {'it-IT': u"principale", 'de-DE': u"Hauptnummer"},
+'_$!<CompanyMain>!$_': {'it-IT': u"nome compagnia", 'de-DE': u"Hauptnummer"},
+'_$!<HomeFAX>!$_': {'it-IT': u"casa fax", 'de-DE': u'private Faxnummer'},
+'_$!<WorkFAX>!$_': {'it-IT': u"lavoro fax", 'de-DE': u"geschaftliche Faxnummer"},
+#'_$!<WorkFAX>!$_': {'it-IT': u"lavoro fax", 'de-DE': u"gesch‰ftliche Faxnummer"}
+'_$!<OtherFAX>!$_': {'it-IT': u"altro Fax", 'de-DE': u"Other Fax"},
+'_$!<Pager>!$_': {'it-IT': u"pager", 'de-DE': u"Pagernummer"},
+'_$!<Other>!$_': {'it-IT': u"altro telefono", 'de-DE': u"anderes Telefon"}
+}
+	
+class contactMe(Plugin):
+
+    def getNameFromNumberType(self, name, language):
+
+        if name != None:
+            for k,v in numberTypesLocalized.iteritems():
+              if k == name:
+                  return v[language]
+        return name
+		
+    @register("it-IT", "(Cerca|Visualizza) ?(?P<contact>[\w |']*) ?(?P<attribute>name|cellulare|telephone number|phone number|indirizzo|indirizzo email|indirizzo|compleanno)(\s|$)")
+    def myContactName(self, speech, language, regex):
+      
+      attributeToFind = regex.group('attribute')	
+      if attributeToFind.count('cellulare') > 0:
+        attributeToFind = 'cellulare'	  
+		
+      contact = regex.group('contact')	
+      if contact.count('tele') > 0:
+        contact = contact.replace('tele','')
+      if contact.count('email') > 0:
+        contact = contact.replace('email','')
+        attributeToFind = 'email'	  
+
+      personToFind = contact
+      if personToFind.count('\'s') > 0:
+        personToFind = personToFind.replace('\'s','')
+      else:
+        personToFind = personToFind.rstrip(' s')
+
+      if len(personToFind) < 3:
+          personToFind = 'None'
+    
+#      self.logger.debug('Person & Attribute: ')	
+#      self.logger.debug(personToFind)	
+#      self.logger.debug(attributeToFind)	
+	
+      contactSearch = ABPersonSearch(self.refId)
+      contactSearch.scope = "Local"
+	  
+      if personToFind == 'None':
+        contactSearch.me = True
+        personToFind = 'my  '
+      else:
+        contactSearch.name = personToFind
+            
+      names = 'Nessun contatto trovato'	  
+
+      answer = self.getResponseForRequest(contactSearch)
+      if ObjectIsCommand(answer, ABPersonSearchCompleted):
+          results = ABPersonSearchCompleted(answer)
+          if results.results != None:
+            persons = results.results
+            identfind = results.results[0]
+            contactIdentifier = identfind.identifier 
+            personToFind = personToFind.rstrip(' ')
+            if len(persons) > 1:
+              personGT1 = 'True'
+              names = personToFind.replace('my ','Your ')
+              names = names + '\' ' + attributeToFind
+            else:
+              personGT1 = 'False'
+              names = personToFind.replace('my ','Your ')
+              if len(personToFind) > 3:
+                names = names + '\' ' + attributeToFind
+              else:
+                names = 'Your ' + attributeToFind
+
+            if attributeToFind == 'name':
+              if len(persons) > 1:
+                names = names + ' :\n\n'
+              else:
+                names = names + ' :\n'			  
+            else:			
+              if len(persons) > 1:
+                names = ''
+
+            for indexPerson in range (len(persons)):
+              Person = persons[indexPerson]
+              if attributeToFind == 'name':
+                if contact.count('my') > 0:
+                  if personGT1 == 'True':
+                    names = names + Person.fullName + '\n(' + Person.nickName + ')' + '\n\n'
+                  else:
+                    names = names + Person.fullName + '\n'
+				
+              if attributeToFind == 'cellulare':
+                try:
+                  if personGT1 == 'False':
+                    if indexPerson == 0:
+                      if len(Person.phones) > 1:
+                        names = names + ' :\n\n'
+                      else:
+                        names = names + ' :\n\n' 			  				  				  
+                  if personGT1 == 'True':
+                    if contact.count('my') > 0:
+                      names = names + '\n' + Person.fullName + '\n(' + Person.nickName + ')' + '\n'                    
+                    else:
+                      names = names + '\n' + Person.fullName + ':\n'                    
+                  for indexTelephone in range (len(Person.phones)):
+                    numberToCall = Person.phones[indexTelephone]
+                    typeToCall = self.getNameFromNumberType(numberToCall.label, language)
+                    names = names + typeToCall + ': ' + numberToCall.number + '\n'
+                except:
+                  if personGT1 == 'True':
+                    names = names + 'No Telephone found.\n'		
+                  else:
+                    names = 'No Telephone found.'		
+				  
+              if attributeToFind == 'email':
+                try:
+                  if personGT1 == 'False':
+                    if indexPerson == 0:
+                      if len(Person.emails) > 1:
+                        names = names + ' :\n\n'
+                      else:
+                        names = names + ' :\n\n' 			  				  				  
+                  if personGT1 == 'True':
+                    if contact.count('my') > 0:
+                      names = names + '\n' + Person.fullName + '\n(' + Person.nickName + ')'  + '\n'                    
+                    else:
+                      names = names + '\n' + Person.fullName + ':\n'                    
+                  for indexEmail in range (len(Person.emails)):
+                    email = Person.emails[indexEmail]
+                    names = names + email.emailAddress + '\n'
+                except:
+                  if personGT1 == 'True':
+                    names = names + 'No Email Address found.\n'		
+                  else:
+                    names = 'No Email Address found.'		
+				  
+              if attributeToFind == 'address':
+                try:
+                  if personGT1 == 'False':
+                    if indexPerson == 0:
+                      if len(Person.addresses) > 1:
+                        names = names + 'es :\n\n'
+                      else:
+                        names = names + ' :\n\n' 			  				  				  
+                  if personGT1 == 'True':
+                    if contact.count('my') > 0:
+                      names = names + '\n' + Person.fullName + '\n(' + Person.nickName + ')' +'\n'                    
+                    else:
+                      names = names + '\n' + Person.fullName + ':\n'                    
+                  for indexAddress in range (len(Person.addresses)):
+                    address = Person.addresses[indexAddress]
+                    typeToCall = self.getNameFromNumberType(address.label, language)
+                    names = names + typeToCall + ':\n' + address.street + '\n' + address.city + ', ' + address.stateCode + ' ' + address.postalCode + '\n\n'
+                except:
+                  if personGT1 == 'True':
+                    names = names + 'No Address found.\n'		
+                  else:
+                    names = 'No Address found.'		
+				  
+              if attributeToFind == 'compleanno':                			  
+                try:			  
+                  if personGT1 == 'False':
+                    names = names + ' :\n' + Person.birthday.strftime("%b %d, %Y") + '\n'
+                  else:
+                    if contact.count('my') > 0:
+                      names = names + Person.fullName + '\n(' + Person.nickName + ')' + '\n' + Person.birthday.strftime("%b %d, %Y") + '\n\n'
+                    else:
+                      names = names + Person.fullName + ':\n' + Person.birthday.strftime("%b %d, %Y") + '\n\n'					
+                except:
+                  if personGT1 == 'True':
+                    names = names + Person.fullName + ':\n' + 'Non ho trovato la sua data di compleanno.\n\n'		
+                  else:
+                    names = 'Non ho trovato la sua data di compleanno.'								
+
+      self.say(names)
+      self.complete_request()
+    
