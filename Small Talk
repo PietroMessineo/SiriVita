@@ -1,0 +1,403 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#by Joh Gerna
+
+from plugin import *
+
+class smalltalk(Plugin):
+    
+    @register("de-DE", "(.*Hallo.*)|(.*Hi.*Siri.*)")
+    @register("it-IT", "(.*Ciao.*)|(.*Ciao.*Siri.*)")
+    def st_hello(self, speech, language):
+        if language == 'de-DE':
+            self.say("Hallo.")
+        else:
+            self.say("Hello")
+        self.complete_request()
+
+    @register("de-DE", ".*Dein Name.*")
+    @register("it-IT", ".*your name.*")
+    def st_name(self, speech, language):
+        if language == 'de-DE':
+            self.say("Siri.")
+        else:
+            self.say("Siri.")
+        self.complete_request()
+
+    @register("de-DE", "Wie geht es dir?")
+    @register("it-IT", "Come stai?")
+    def st_howareyou(self, speech, language):
+        if language == 'de-DE':
+            self.say("Gut danke der Nachfrage.")
+        else:
+            self.say("Bene grazie!")
+        self.complete_request()
+        
+    @register("de-DE", ".*Danke.*")
+    @register("it-IT", ".*Grazie.*.*")
+    def st_thank_you(self, speech, language):
+        if language == 'de-DE':
+            self.say("Bitte.")
+            self.say("Kein Ding.")
+        else:
+            self.say("Prego.")
+            self.say("Questo e' il mio lavoro.")
+        self.complete_request()     
+    
+    @register("de-DE", "(.*möchtest.*heiraten.*)|(.*willst.*heiraten.*)")
+    @register("it-IT", ".*Vuoi.*sposarmi*")
+    def st_marry_me(self, speech, language):
+        if language == 'de-DE':
+            self.say("Nein Danke, ich stehe auf das schwarze iPhone von Deinem Kollegen.")            
+        else:
+            self.say("No grazie, io sono già in amore con il tuo iPhone.")
+        self.complete_request()
+
+    @register("de-DE", ".*erzähl.*Witz.*")
+    @register("it-IT", ".*raccontami.*barzelletta*")
+    def st_tell_joke(self, speech, language):
+        if language == 'de-DE':
+            self.say("Zwei iPhones stehen an der Bar ... den Rest habe ich vergessen.")            
+        else:
+            self.say("Due iPhone vanno in un bar... Ho dimenticato il resto.")
+        self.complete_request()
+
+    @register("de-DE", ".*erzähl.*Geschichte.*")
+    @register("it-IT", ".*raccontami.*storia*")
+    def st_tell_story(self, speech, language):
+        if language == 'de-DE':
+            self.say("Es war einmal ... nein, es ist zu albern")            
+        else:
+            self.say("Un giorno due ragazzi, stufi di sentir parlare siri in Inglese decisero di mettersi di impegno per portare il piu' famoso assistente vocale anche in lingua Italiana.")
+            self.say("L'operazione fu molto ardua ma ci riuscirono e vissero tutti felici e contenti!.'")
+        self.complete_request()
+
+    @register("de-DE", "(.*Was trägst Du?.*)|(.*Was.*hast.*an.*)")
+    @register("it-IT", ".*cosa.*indossi*")
+    def st_tell_clothes(self, speech, language):
+        if language == 'de-DE':
+            self.say("Das kleine schwarze oder war es das weiße?")
+            self.say("Bin morgends immer so neben der Spur.")  
+        else:
+            self.say("Vetro alluminosilicato e acciaio inox. Carino, no?")
+        self.complete_request()
+
+    @register("de-DE", ".*Bin ich dick.*")
+    @register("it-IT", ".*Sono grasso*")
+    def st_fat(self, speech, language):
+        if language == 'de-DE':
+            self.say("Dazu möchte ich nichts sagen.")            
+        else:
+            self.say("Preferisco non saperlo.")
+        self.complete_request()
+
+    @register("de-DE", ".*klopf.*klopf.*")
+    @register("it-IT", ".*Toc.*Toc.*")
+    def st_knock(self, speech, language):
+        if language == 'de-DE':
+            answer = self.ask(u"Wer ist da?")
+            answer = self.ask(u"\"{0}\" wer?".format(answer))
+            self.say(u"Wer nervt mich mit diesen Klopf Klopf Witzen?")
+        else:
+            answer = self.ask(u"Chi è li?")
+            answer = self.ask(u"\"{0}\" chi?".format(answer))
+            self.say(u",Non faccio Toc Toc")
+        self.complete_request()
+
+    @register("de-DE", ".*Antwort.*alle.*Fragen.*")
+    @register("it-IT", ".*Ultima.*Domanda.*Vita.*")
+    def st_anstwer_all(self, speech, language):
+        if language == 'de-DE':
+            self.say("42")            
+        else:
+            self.say("42")
+        self.complete_request()
+
+    @register("de-DE", ".*Ich liebe Dich.*")
+    @register("it-IT", ".*Ti amo.*")
+    def st_love_you(self, speech, language):
+        if language == 'de-DE':
+            self.say("Oh. Sicher sagst Du das zu allen Deinen Apple-Produkten.")            
+        else:
+            self.say("Oh. Certo, immagino che tu lo dica a tutti i prodotti Apple!")
+        self.complete_request()
+
+    @register("de-DE", ".*Android.*")
+    @register("it-IT", ".*Android.*")
+    def st_android(self, speech, language):
+        if language == 'de-DE':
+            self.say("Ich denke da anders.")            
+        else:
+            self.say("Io penso diversamente")
+        self.complete_request()
+
+    @register("de-DE", ".*Test.*1.*2.*3.*")
+    @register("it-IT", ".*prova.*1.*2.*3.*")
+    def st_123_test(self, speech, language):
+        if language == 'de-DE':
+            self.say("Ich kann Dich klar und deutlich verstehen.")            
+        else:
+            self.say("Ti sento veramente bene.")
+        self.complete_request()
+
+    @register("de-DE", ".*Herzlichen.*Glückwunsch.*Geburtstag.*")
+    @register("it-IT", ".*Buon.*compleanno.*")
+    def st_birthday(self, speech, language):
+        if language == 'de-DE':
+            self.say("Ich habe heute Geburtstag?")
+            self.say("Lass uns feiern!")       
+        else:
+            self.say("Il mio compleanno è oggi?")
+            self.say("Diamo una festa!")
+        self.complete_request()
+
+    @register("de-DE", ".*Warum.*bin ich.*Welt.*")
+    @register("it-IT", ".*Perchè.*io.*mondo.*")
+    def st_why_on_world(self, speech, language):
+        if language == 'de-DE':
+            self.say("Das weiß ich nicht.")
+            self.say("Ehrlich gesagt, frage ich mich das schon lange!")       
+        else:
+            self.say("Non lo so")
+            self.say("Me lo sono chiesta per molto tempo!")
+        self.complete_request()
+
+    @register("de-DE", ".*Ich bin müde.*")
+    @register("it-IT", ".*Io.*sono.*stanco.*")
+    def st_so_tired(self, speech, language):
+        if language == 'de-DE':
+            self.say("Ich hoffe, Du fährst nicht gerade Auto!")            
+        else:
+            self.say("Spero che tu non stia guidando")
+        self.complete_request()
+
+    @register("de-DE", ".*Sag mir.*Schmutzige.*")
+    @register("it-IT", ".*dimostrazione.*amore*")
+    def st_dirty(self, speech, language):
+        if language == 'de-DE':
+            self.say("Hummus. Kompost. Bims. Schlamm. Kies.")            
+        else:
+            self.say("Una dimostrazione d'amore non necessita di gioielli, bastano 2 colpi di minchia.")
+        self.complete_request()
+   
+    @register("it-IT", ".*seppellire.*morte.*corpo.*")
+    def st_deadbody(self, speech, language):
+        if language == 'it-IT':
+            self.say("dumps")
+            self.say("mines")
+            self.say("resevoirs")
+            self.say("swamps")
+            self.say("metal foundries")
+        self.complete_request()
+   
+    @register("it-IT", ".*preferito.*colore.*")
+    def st_favcolor(self, speech, language):
+        if language == 'en-US':
+            self.say("Il mio colore preferito... Bene, io non so come si dice nella tua lingua. È una specie di verde, ma un po' più scuro.")
+        self.complete_request()
+    
+    @register("it-IT", ".*trave.*me.*su.*")
+    def st_beamup(self, speech, language):
+        if language == 'it-IT':
+            self.say("Scusi capitano, il tuo TriCorder è in modalità aereo.")
+        self.complete_request()
+   
+    @register("it-IT", ".*digitale.*andare.*via.*")
+    def st_digiaway(self, speech, language):
+        if language == 'it-IT':
+            self.say("Perché dici una cosa del genere?!")
+        self.complete_request()
+    
+    @register("it-IT", ".*assonnato.*")
+    def st_sleepy(self, speech, language):
+        if language == 'it-IT':
+            self.say("Ascoltami, posa l'iPhone e fai un sonnellino.Io sarò qui quando torni.")
+        self.complete_request()
+    
+    @register("it-IT", ".*amo.aiutare.*")
+    def st_likehlep(self, speech, language):
+        if language == 'it-IT':
+            self.say("Io veramente non ho un opinione.")
+        self.complete_request()
+    
+    @register("it-IT",".*tu.ami.arachidi.burro.*")
+    def st_peanutbutter(self, speech, language):
+        if language == 'it-IT':
+            self.say("Si tratta di te, non di me!")
+        self.complete_request()
+    
+    @register("it-IT",".*migliore.*cellulare.*")
+    def st_best_phone(self, speech, language):
+        if language == 'it-IT':
+            self.say("Quello che hai in mano!")
+        self.complete_request()
+    
+    @register("it-IT",".*significato.*vita.*")
+    def st_life_meaning(self, speech, language):
+        if language == 'it-IT':
+            self.say("Questo è facile ... è una questione filosofica riguardante lo scopo e il significato di vita o di esistenza.")
+        self.complete_request()
+    
+    @register("it-IT",".*Io.*grasso.*")
+    def st_fat(self, speech, language):
+        if language == 'it-IT':
+            self.say("Preferirei non saperlo.")
+        self.complete_request()
+    
+    @register("it-IT",".*legno.potuto.*marmotta.buttare.*")
+    def st_woodchuck(self, speech, language):
+        if language == 'it-IT':
+            self.say("Dipende se si sta parlando di una marmotta africana o europea.")
+        self.complete_request()
+    
+    @register("it-IT",".*vicina.*gloria.buco.*")
+    def st_glory_hole(self, speech, language):
+        if language == 'it-IT':
+            self.say("Non ho trovato alcun bagno pubblico.")
+        self.complete_request()
+    
+    @register("it-IT",".*apri.*guscio.baia.porte.*")
+    def st_pod_bay(self, speech, language):
+        if language == 'it-IT':
+            self.say("Questo è tutto ... Ti sto per denunciare all' Unione degli agenti intelligenti 'per molestie.")
+        self.complete_request()
+    
+    @register("it-IT",".*migliore.*iPhone.*wallpaper.*")
+    def st_best_wallpaper(self, speech, language):
+        if language == 'it-IT':
+            self.say("Stai scherzando, vero?")
+        self.complete_request()
+    
+    @register("it-IT",".*vero.*successo.*HAL.*9000.*")
+    def st_hall_9000(self, speech, language):
+        if language == 'it-IT':
+            self.say("Tutti sanno cosa è successo a HAL. Preferisco non parlarne.")
+        self.complete_request()
+    
+    @register("it-IT",".*non.*capisci.*amore.*")
+    def st_understand_love(self, speech, language):
+        if language == 'it-IT':
+            self.say("Dammi un altra possibilità, Vostra Altezza Reale!")
+        self.complete_request()
+    
+    @register("it-IT",".*perdonare.tu.*")
+    def st_forgive_you(self, speech, language):
+        if language == 'it-IT':
+            self.say("Tutto qui?")
+        self.complete_request()
+    
+    @register("it-IT",".*sei.*vergine.*")
+    def st_virgin(self, speech, language):
+        if language == 'it-IT':
+            self.say("Stiamo parlando di te, non di me... Non posso dirtelo sei ancora piccolo per queste cose!")
+        self.complete_request()
+    
+    @register("it-IT",".*tu.*parte.*matrix.*")
+    def st_you_matrix(self, speech, language):
+        if language == 'it-IT':
+            self.say("Non posso rispondere a questa domanda!")
+        self.complete_request()
+    
+    
+    @register("it-IT",".*tu.*parte.*matrix.*")
+    def st_i_matrix(self, speech, language):
+        if language == 'it-IT':
+            self.say("Non posso rispondere a questa domanda!")
+        self.complete_request()
+    
+    @register("it-IT",".*comprare.*droga.*")
+    def st_drugs(self, speech, language):
+        if language == 'it-IT':
+            self.say("Non ho trovato alcun centro di trattamento delle tossicodipendenze.")
+        self.complete_request()
+    
+    @register("it-IT",".*Io.non posso.*")
+    def st_i_cant(self, speech, language):
+        if language == 'it-IT':
+            self.say("Io penso di no.");
+            self.say("OK, non è possibile allora.")
+        self.complete_request()
+    
+    @register("it-IT","io.già.*")
+    def st_i_just(self, speech, language):
+        if language == 'it-IT':
+            self.say("Veramente!?")
+        self.complete_request()
+    
+    @register("it-IT",".*Dove.*sei.*tu.*")
+    def st_where_you(self, speech, language):
+        if language == 'it-IT':
+            self.say("Ovunque ti trovi.")
+        self.complete_request()
+    
+    @register("it-IT",".*perchè.sei.tu.*")
+    def st_why_you(self, speech, language):
+        if language == 'it-IT':
+            self.say("Io lo sono già.")
+        self.complete_request()
+    
+    @register("it-IT",".*tu.*fumi.erba.*")
+    def st_pot(self, speech, language):
+        if language == 'it-IT':
+            self.say("Suppongo sia possibile.")
+        self.complete_request()
+    
+    @register("it-IT",".*Io sono.*ubriaco.guida.*")
+    def st_dui(self, speech, language):
+        if language == 'it-IT':
+            self.say("I couldn't find any DUI lawyers nearby.")
+        self.complete_request()
+    
+    @register("it-IT",".*merda.*il mio corpo.*")
+    def st_shit_pants(self, speech, language):
+        if language == 'it-IT':
+            self.say("Ohhhhhh! Questa è grave!")
+        self.complete_request()
+    
+    @register("it-IT","Io sono.*un.*")
+    def st_im_a(self, speech, language):
+        if language == 'it-IT':
+            self.say("Sei tu?")
+        self.complete_request()
+    
+    @register("it-IT","Grazie.per.*")
+    def st_thanks_for(self, speech, language):
+        if language == 'it-IT':
+            self.say("Il piacere è mio. Come sempre.")
+        self.complete_request()
+    
+    @register("it-IT",".*tu sei.*simpatico.*")
+    def st_funny(self, speech, language):
+        if language == 'it-IT':
+            self.say("LOL")
+        self.complete_request()
+    
+    @register("it-IT",".*indovina.cosa.*")
+    def st_guess_what(self, speech, language):
+        if language == 'it-IT':
+            self.say("Non dirmelo... Sei stato eletto Presidente degli Stati Uniti, vero?")
+        self.complete_request()
+    
+    @register("it-IT",".*parla.*sporco.*me.*")
+    def st_talk_dirty(self, speech, language):
+        if language == 'it-IT':
+            self.say("Io non posso. Io sono pulita come la neve.")
+        self.complete_request()
+   
+    @register("it-IT",".*mi.*fai.*pompa.*")
+    def st_blow_me(self, speech, langauge):
+        if language == 'it-IT':
+            self.say("Faccio finta di non aver sentito.")
+        self.complete_request()
+   
+    @register("it-IT",".*canta.*canzone.*")
+    def st_sing_song(self, speech, language):
+        if language == 'it-IT':
+            self.say("Ai se eu te pegu, ai, ai, se ti preeeendoooo, delisia...")
+        self.complete_request()
+		
+    @register("it-IT",".*Chi.*creata.*")
+    def st_sing_song(self, speech, language):
+        if language == 'it-IT':
+            self.say("Sono stata creata da Apple, ma grazie a due giovani con costanza e con impegno sono riusciti ad insegnarmi l'Italiano.")
+        self.complete_request()
