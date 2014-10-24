@@ -1,0 +1,186 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""
+---------------------------------------------------------------------
+Authors :
+Created Sebeqwerty
+Translated by: Pietro Messineo
+Remake from Currenttime.py
+---------------------------------------------------------------------
+About :
+Good day plugin its really cool :)
+---------------------------------------------------------------------
+Usage :
+1.Good morning 
+2.Good evening
+3.Good day
+4.good night
+-------------------------------------------------------------------
+Instalation :
+Just create folder called "Goodday" in your plugins directory, and place 
+this file into it. Then add "Goodday" to your plugins.conf
+---------------------------------------------------------------------
+IMPORTANT :
+You MUST download the newest version of SiriServerCore.
+---------------------------------------------------------------------
+
+v1.0 beta (18th May 2012) - Beta
+"""
+
+from plugin import *
+from siriObjects.clockObjects import ClockSnippet, ClockObject
+import json
+import random
+import types
+import urllib
+import urllib2
+
+
+
+
+localizations = {
+    "search":
+    {
+      "it-IT": [u"..."]
+    },                  
+    "goodmorning": 
+    {
+     "it-IT": [u"Buongiorno, sono già le @{fn#currentTime}"]
+    }, 
+    "goodday": 
+    {
+     "it-IT": [u"E 'davvero una buona giornata, sono già le @{fn#currentTime}"]
+    }, 
+    "goodevening": 
+    { 
+      "it-IT": [u"Buonasera, sono già le @{fn#currentTime}"]
+    },
+    "goodnight":
+    {
+      "it-IT": [u"Buonanotte, sono già le @{fn#currentTime}"]
+    }
+}
+def getNameFromGoogle(request):
+    try:
+        result = getWebsite(request, timeout=5)
+        root = json.loads(result)
+        location = root["results"][0]["formatted_address"]
+        return location
+    except:
+        return None
+
+
+
+class currentTime(Plugin):
+    
+    def showWait(self, language):
+        textView = UIAssistantUtteranceView()
+        textView.speakableText = textView.text = random.choice(localizations['search'][language])
+        textView.dialogIdentifier = "Clock#getTime"
+
+        rootAnchor = UIAddViews(self.refId)
+        rootAnchor.dialogPhase = rootAnchor.DialogPhaseReflectionValue
+        rootAnchor.scrollToTop = False
+        rootAnchor.temporary = False
+        rootAnchor.views = [textView]  
+        
+        self.sendRequestWithoutAnswer(rootAnchor)
+
+    @register("it-IT", "(.*Bella giornata.*)")
+    def Good_day(self, speech, language):
+        self.showWait(language)
+        
+        
+        textView = UIAssistantUtteranceView()
+        textView.text = textView.speakableText = random.choice(localizations["goodday"][language])
+        textView.dialogIdentifier = "Clock#showTimeInCurrentLocation"
+        textView.listenAfterSpeaking = False
+        
+        clock = ClockObject()
+        clock.timezoneId = self.connection.assistant.timeZoneId
+        
+        clockView = ClockSnippet()
+        clockView.clocks = [clock]
+        
+        rootAnchor = UIAddViews(self.refId)
+        rootAnchor.dialogPhase = rootAnchor.DialogPhaseSummaryValue
+        rootAnchor.views = [textView, clockView]
+        
+        
+        self.sendRequestWithoutAnswer(rootAnchor)
+        self.complete_request()
+
+    @register("it-IT", "(.*Buongiorno.*)")
+    def Good_morning(self, speech, language):
+        self.showWait(language)
+        
+        
+        textView = UIAssistantUtteranceView()
+        textView.text = textView.speakableText = random.choice(localizations["goodmorning"][language])
+        textView.dialogIdentifier = "Clock#showTimeInCurrentLocation"
+        textView.listenAfterSpeaking = False
+        
+        clock = ClockObject()
+        clock.timezoneId = self.connection.assistant.timeZoneId
+        
+        clockView = ClockSnippet()
+        clockView.clocks = [clock]
+        
+        rootAnchor = UIAddViews(self.refId)
+        rootAnchor.dialogPhase = rootAnchor.DialogPhaseSummaryValue
+        rootAnchor.views = [textView, clockView]
+        
+        
+        self.sendRequestWithoutAnswer(rootAnchor)
+        self.say(u"Buona giornata {0}".format(self.user_name()))
+        self.complete_request()
+    
+    @register("it-IT", "(.*Buonasera.*)")
+    def Good_evening(self, speech, language):
+        self.showWait(language)
+        
+        
+        textView = UIAssistantUtteranceView()
+        textView.text = textView.speakableText = random.choice(localizations["goodevening"][language])
+        textView.dialogIdentifier = "Clock#showTimeInCurrentLocation"
+        textView.listenAfterSpeaking = False
+        
+        clock = ClockObject()
+        clock.timezoneId = self.connection.assistant.timeZoneId
+        
+        clockView = ClockSnippet()
+        clockView.clocks = [clock]
+        
+        rootAnchor = UIAddViews(self.refId)
+        rootAnchor.dialogPhase = rootAnchor.DialogPhaseSummaryValue
+        rootAnchor.views = [textView, clockView]
+        
+        
+        self.sendRequestWithoutAnswer(rootAnchor)
+        self.complete_request()
+    
+    @register("it-IT", "(.*Buonanotte.*)")
+    def Good_night(self, speech, language):
+        self.showWait(language)
+        
+        
+        textView = UIAssistantUtteranceView()
+        textView.text = textView.speakableText = random.choice(localizations["goodnight"][language])
+        textView.dialogIdentifier = "Clock#showTimeInCurrentLocation"
+        textView.listenAfterSpeaking = False
+        
+        clock = ClockObject()
+        clock.timezoneId = self.connection.assistant.timeZoneId
+        
+        clockView = ClockSnippet()
+        clockView.clocks = [clock]
+        
+        
+        rootAnchor = UIAddViews(self.refId)
+        rootAnchor.dialogPhase = rootAnchor.DialogPhaseSummaryValue
+        rootAnchor.views = [textView, clockView]
+        
+        
+        self.sendRequestWithoutAnswer(rootAnchor)
+        self.say(u"Sogni d'oro {0}".format(self.user_name()))
+        self.complete_request()
