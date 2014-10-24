@@ -1,0 +1,15 @@
+#Random Number Generator
+#Author: Connor Meacham (Cmeacham98)
+#Translated by Pietro Messineo
+#Devil_Of_Chaos provided a big chunk of the code. Credit really goes to him!
+
+from plugin import *
+import random
+
+class randomnumbers(Plugin):
+
+         @register ("it-IT", "(Numero a caso)|(Numeri a caso)")
+         def rndm_num(self, speech, language):
+          number = random.randrange(0, 99999, 9)
+          self.say("{0}".format(number))
+          self.complete_request()
