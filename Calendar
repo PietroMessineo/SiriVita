@@ -1,0 +1,103 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""
+---------------------------------------------------------------------
+Authors :
+Created by Ed Emond
+Transleted By Pietro Messineo
+---------------------------------------------------------------------
+About :
+Using this plugin to inquiry about your calendar.
+---------------------------------------------------------------------
+Usage :
+Show my calendar
+What's my next appointment
+What's on my calendar for Friday
+---------------------------------------------------------------------
+Instalation :
+Just create folder called "calendar" in your plugins directory, and place 
+this file into it. Then add "calendar" to your plugins.conf
+---------------------------------------------------------------------
+IMPORTANT :
+You MUST download the newest version of SiriServerCore.
+---------------------------------------------------------------------
+Changelog :
+v1.0 (8th May 2012) - initial release
+"""
+
+import pytz
+
+from datetime import *
+from plugin import *
+from pytz import timezone
+from datetime import datetime, timedelta
+
+from siriObjects.baseObjects import ObjectIsCommand
+from siriObjects.calendarObjects import EventSearch, Event, EventSnippet
+from siriObjects.uiObjects import *
+from siriObjects.systemObjects import *
+
+daysToNumberTypes = {
+'de-DE': {'montag': "0",'dienstag': "1", 'mittwoch': "2", 'donnerstag': "3",'freitag': "4", 'samtag': "5", 'sonntag': "6"},
+'it-IT': {'lunedì': "0",'martedì': "1", 'mercoledì': "2", 'giovedì': "3",'venerdì': "4", 'sabato': "5", 'domenica': "6"}
+}
+     
+class calendarMe(Plugin):
+    
+    @register("de-DE", "(What's|Whats|Show) ?([\w ]*) ?(?P<content>calendar|appointment) ?([\w ]*)(\s|$)")
+    @register("it-IT", "(Cos'è|Visualizza|Mostra) ?([\w ]*) ?(?P<content>calendar|appointment) ?([\w ]*)(\s|$)")
+    def myCalendar(self, speech, language, regex):
+		
+      content = regex.group('content')	
+      calSearch = EventSearch(self.refId)
+      calSearch.me = True
+      calSearch.scope = "Local"
+      if content.count('appointment') > 0:	# What's my next appointment
+        calSearch.limit = 1
+      if content.count('calendar') > 0:		# Show my calendar
+        calSearch.limit = 10	  
+      if regex.group(4).count('for') > 0:	# What's on my calendar for Friday
+        tz = timezone(self.connection.assistant.timeZoneId)
+        DOW = speech.split()[-1]
+
+        now = datetime.now(tz)
+
+        if DOW.lower() in daysToNumberTypes[language]:
+          calSearchDOW = int(daysToNumberTypes[language][DOW.lower()])
+        else:
+          calSearchDOW = now.weekday()
+			
+        dayCount = 0
+        if now.weekday() > calSearchDOW:
+          dayCount = (now.weekday() - calSearchDOW) + 6
+        if now.weekday() < calSearchDOW:
+          dayCount = calSearchDOW - now.weekday()
+        calSearchDate = datetime.now(tz) + timedelta(days=dayCount)
+
+        calSearch.timeZoneId = self.connection.assistant.timeZoneId
+        calSearch.startDate = datetime(calSearchDate.year, calSearchDate.month, calSearchDate.day, 0, 0, 0, 0, tzinfo=tz)
+        calSearch.endDate = datetime(calSearchDate.year, calSearchDate.month, calSearchDate.day, 23, 59, 0, 0, tzinfo=tz)
+		
+      answer = self.getResponseForRequest(calSearch)
+	  	  
+      if answer["class"] != "CommandFailed":
+        if answer["properties"]["results"] == []:
+          view = AddViews(self.refId, dialogPhase="Summary")
+          view.views += [AssistantUtteranceView(text="Sembra che non ci sono eventi.", speakableText="Sembra che non ci sono eventi.", dialogIdentifier="EmailFindDucs#foundNoEmail")]
+          self.sendRequestWithoutAnswer(view)
+        else:
+          event_ = answer["properties"]["results"] 
+          view = AddViews(self.refId, dialogPhase="Summary")
+          view1 = AssistantUtteranceView(text="Ok, questo e' quello che ho trovato: ", speakableText="Ok, questo e' quello che ho trovato: ", dialogIdentifier="EmailFindDucs#foundEmail")
+          snippet = EventSnippet()
+          snippet.events = event_
+          view2 = snippet
+          view.views = [view1, view2]
+          self.sendRequestWithoutAnswer(view)
+      else:
+        view = AddViews(self.refId, dialogPhase="Summary")
+        view1 = AssistantUtteranceView(text="Non hai un account di eventi ancora configurato.", speakableText="Non hai un account di eventi ancora configurato.", dialogIdentifier="EmailCreateDucs#noEmailAccount")
+        view2 = AssistantUtteranceView(text="Basta lanciare l'applicazione Mail, che vi guiderà attraverso il processo di installazione.", speakableText="Basta lanciare l'applicazione Mail, che vi guiderà attraverso il processo di installazione.", dialogIdentifier="EmailCreateDucs#noEmailAccount")
+        view.views = [view1, view2]
+	  
+      self.complete_request()
