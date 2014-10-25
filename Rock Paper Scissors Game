@@ -1,0 +1,16 @@
+#Rock Paper Scissors Game
+#Re-live those childhood memories!
+#Author: Connor Meacham (Cmeacham98)
+#Translated By Pietro Messineo
+
+from plugin import *
+from random import choice
+
+class rockpaperscissors(Plugin):
+
+         @register ("it-IT", "(Carta Forbice Sasso)")
+         def rps(self, speech, language):
+          answer = self.ask(u"Ok, dimmi la tua mossa, poi ti diro' la mia.")
+          choices = ["Carta!", "Forbice!", "Sasso"]
+          self.say(choice(choices))
+          self.complete_request()
