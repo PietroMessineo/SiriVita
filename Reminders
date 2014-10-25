@@ -1,0 +1,371 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import re
+import time
+import pytz
+
+from subprocess import call
+
+from datetime import *
+from pytz import timezone
+
+from plugin import *
+
+from siriObjects.baseObjects import ObjectIsCommand, RequestCompleted, AceObject, ClientBoundCommand
+from siriObjects.uiObjects import UIAddViews, UIAssistantUtteranceView, UIConfirmationOptions
+from siriObjects.systemObjects import *
+from siriObjects.reminderObjects import *
+
+class reminderPlugin(Plugin):
+	
+	def confirmReminderTime(self, subject, reminderTime, amos, language):
+		conf = UIConfirmationOptions()
+		conf.denyCommands = [SendCommands([StartRequest(utterance="Cancel")])]
+		conf.submitCommands = [SendCommands([StartRequest(utterance="Confirm")])]
+		conf.cancelCommands = [SendCommands([StartRequest(utterance="Cancel")])]
+		conf.confirmCommands = [SendCommands([StartRequest(utterance="Confirm")])]
+		conf.confirmText = u"Conferma"
+		conf.denyText = u"Cancella"
+		conf.cancelLabel = u"Cancella"
+		conf.submitLabel = u"Conferma"
+		conf.cancelTrigger = u"Rifiuta"
+		timetrigger = ReminderDateTimeTrigger()
+		timetrigger.date = reminderTime
+		timetrigger.timeZoneId = self.connection.assistant.timeZoneId
+		snippetData = ReminderObject()
+		snippetData.subject = subject
+		snippetData.dueDate = reminderTime
+		snippetData.dueDateTimeZoneId = self.connection.assistant.timeZoneId
+		snippetData.trigger = timetrigger
+		snippetData.identifier = amos
+		snippet = ReminderSnippet()
+		snippet.reminders = [snippetData]
+		snippet.confirmationOptions = conf
+		confirm = UIAddViews(self.refId)
+		confirm.dialogPhase="Confirmation"
+		assistant = UIAssistantUtteranceView()
+		assistant.text = u"Questo è il tuo promemoria:"
+		assistant.speakableText = u"Questo è il tuo promemoria...  Posso ricordarlo?"
+		assistant.dialogIdentifier = "Reminders#willCreateOneTimeReminder"
+		assistant.listenAfterSpeaking = True
+		confirm.views = [assistant,snippet]
+		return self.getResponseForRequest(confirm)
+		
+	def getLists(self, xamos):
+		retriveData = ReminderObject()
+		retriveData.identifier = xamos
+		request = DomainObjectRetrieve(self.refId)
+		request.identifiers = [retriveData]
+		response = self.getResponseForRequest(request)
+		if ObjectIsCommand(response, DomainObjectRetrieveCompleted):
+			if response['class'] == "DomainObjectRetrieveCompleted":
+				if response.has_key('properties'):
+					objProperties = response['properties']['objects'][0]['properties']
+					if objProperties.has_key('lists'):
+						lists = objProperties['lists']
+					else:
+						lists = []
+				else:
+					lists = []
+			else:
+				lists = []
+		else:
+			lists = []
+		return lists
+									
+	def getXamos(self, subject, reminderTime, amos, language):
+		timetrigger = ReminderDateTimeTrigger()
+		timetrigger.date = reminderTime
+		timetrigger.timeZoneId = self.connection.assistant.timeZoneId
+		commit = ReminderObject()
+		commit.identifier = amos
+		commit.lists = []
+		commit.trigger = timetrigger
+		commit.subject = subject
+		commit.dueDate = reminderTime
+		commit.dueDateTimeZoneId = self.connection.assistant.timeZoneId
+		request = DomainObjectCommit(self.refId)
+		request.identifier = commit
+		response = self.getResponseForRequest(request)
+		if ObjectIsCommand(response, DomainObjectCommitCompleted):
+			xamos = DomainObjectCommitCompleted(response)
+			return xamos.identifier
+		
+	def updateReminder(self, reminderTime, amos, language):
+		timetrigger = ReminderDateTimeTrigger()
+		timetrigger.date = reminderTime
+		timetrigger.timeZoneId = self.connection.assistant.timeZoneId
+		updateIdentifier = ReminderObject()
+		updateIdentifier.identifier = amos
+		updateTrigger = ReminderObject()
+		updateTrigger.trigger = timetrigger
+		updateTrigger.dueDate = reminderTime
+		updateTrigger.dueDateTimeZoneId = self.connection.assistant.timeZoneId
+		request = DomainObjectUpdate(self.refId)
+		request.identifier = updateIdentifier
+		request.setFields = updateTrigger
+		response = self.getResponseForRequest(request)
+		if ObjectIsCommand(response, DomainObjectUpdateCompleted):
+			amos = DomainObjectUpdateCompleted(response)
+			return amos.identifier
+		
+	def createReminder(self, subject):
+		reminder = ReminderObject()
+		reminder.subject = subject
+		request = DomainObjectCreate(self.refId)
+		request.object = reminder
+		response = self.getResponseForRequest(request)
+		if ObjectIsCommand(response, DomainObjectCreateCompleted):
+			responseObject = DomainObjectCreateCompleted(response)
+			return responseObject.identifier
+	
+	def checkTime(self, time, language):
+		tz = timezone(self.connection.assistant.timeZoneId)
+		pmWords = ["pm"]
+		amWords = ["am"]
+		pmSearch = re.compile(r'\b%s\b' % '\\b|\\b'.join(pmWords), re.IGNORECASE)
+		amSearch = re.compile(r'\b%s\b' % '\\b|\\b'.join(amWords), re.IGNORECASE)
+		m = re.match('(\d{1,2}) ([\w ]+)', str(time), re.IGNORECASE)
+		hour = m.group(1)
+		timehint = m.group(2)
+		x = datetime.now(tz)
+		if len(pmSearch.findall(time)) > 0:
+			print "using PM"
+			if hour == "12":
+				pmtime = int(hour)
+				correctTime = x.replace(hour=pmtime, minute=0, second=0, microsecond=0)
+			if hour != "12":
+				pmtime = int(hour) + 12
+				correctTime = x.replace(hour=pmtime, minute=0, second=0, microsecond=0)
+		if len(amSearch.findall(time)) > 0:
+			print "using AM"
+			if hour == "12":
+				correctTime = x.replace(hour=23, minute=59, second=0, microsecond=0)
+			if hour != "12":
+				amtime = int(hour)
+				correctTime = x.replace(hour=amtime, minute=0, second=0, microsecond=0)
+		if correctTime < x:
+			correctTime = correctTime + timedelta(days=1)
+
+		return correctTime
+			
+
+	@register('it-IT', 'Ricordami ([\w ]+)')
+	def setReminder(self, speech, language, regex):
+		subject = regex.group(1)
+		reminderTime = None
+		
+		if 'at' in regex.group(1):
+			matches = re.search("Alle ([\w]+)? ([\w]+)?", regex.group(1))
+			if matches.group(1).isdigit():
+				if matches.group(2) == "am":
+					concat = []
+					concat.append(matches.group(1))
+					concat.append(matches.group(2))
+					concat = " ".join(concat)
+					
+					reminderTime = self.checkTime(concat, language)
+					subject = re.sub("at "+concat, "", subject)
+				
+				elif matches.group(2) == "pm":
+					concat = []
+					concat.append(matches.group(1))
+					concat.append(matches.group(2))
+					concat = " ".join(concat)
+
+					reminderTime = self.checkTime(concat, language)
+					subject = re.sub("at "+concat, "", subject)
+		
+		elif 'in' in regex.group(1):
+			allGood = False
+			matches = re.search("tra ([\w]+)? ([\w]+)?", regex.group(1))
+			if matches.group(2) == "minuto" or matches.group(2) == "minuti" or matches.group(2) == "Minuto" or matches.group(2) == "Minuti":
+				if matches.group(1).isdigit():
+					secondsToAdd = int(matches.group(1)) * 60
+					allGood = True
+				elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+					secondsToAdd = 60
+					allGood = True
+
+			elif matches.group(2) == "ora" or matches.group(2) == "ore" or matches.group(2) == "Ora" or matches.group(2) == "Ore":
+				if matches.group(1).isdigit():
+					secondsToAdd = int(matches.group(1)) * 3600
+					allGood = True
+				elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+					secondsToAdd = 3600
+					allGood = True
+
+			elif matches.group(2) == "giorno" or matches.group(2) == "giorni" or matches.group(2) == "Giorno" or matches.group(2) == "Giorni":
+				if matches.group(1).isdigit():
+					secondsToAdd = int(matches.group(1)) * 86400
+					allGood = True
+				elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+					secondsToAdd = 86400
+					allGood = True
+
+			elif matches.group(2) == "settimana" or matches.group(2) == "settimane" or matches.group(2) == "Settimana" or matches.group(2) == "Settimane":
+				if matches.group(1).isdigit():
+					secondsToAdd = int(matches.group(1)) * 604800
+					allGood = True
+				elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+					secondsToAdd = 604800
+					allGood = True
+			
+			if allGood == True:
+				reminderTime = datetime.now(timezone(self.connection.assistant.timeZoneId)) + timedelta(days=0, seconds=secondsToAdd)
+				subject = re.sub("in "+matches.group(1)+" "+matches.group(2), "", subject)
+		
+		subject = re.sub("  ", " ", re.sub("^to ", "", subject.strip())).capitalize()
+		view = UIAddViews(self.refId)
+		view.dialogPhase = "Reflection"
+		assistant = UIAssistantUtteranceView()
+		assistant.text = assistant.speakableText = reminderTime
+		assistant.dialogIdentifier="Reminders#creating"
+		view.views = [assistant]
+		self.sendRequestWithoutAnswer(view)
+		amos = self.createReminder(subject)
+		if reminderTime == None:
+			view = UIAddViews(self.refId)
+			view.dialogPhase="Clarification"
+			assistant = UIAssistantUtteranceView()
+			assistant.text = assistant.speakableText = u"Quando devo ricordartelo?"
+			assistant.dialogIdentifier = "Reminders#promptForTime"
+			assistant.listenAfterSpeaking = True
+			view.views = [assistant]
+			answer = self.getResponseForRequest(view)
+			if 'At' in answer:
+				matches = re.search("Alle ([\w]+)? ([\w]+)?", answer)
+				if matches.group(1).isdigit():
+					if matches.group(2) == "am":
+						concat = []
+						concat.append(matches.group(1))
+						concat.append(matches.group(2))
+						concat = " ".join(concat)
+
+						reminderTime = self.checkTime(concat, language)
+
+					elif matches.group(2) == "pm":
+						concat = []
+						concat.append(matches.group(1))
+						concat.append(matches.group(2))
+						concat = " ".join(concat)
+
+						reminderTime = self.checkTime(concat, language)
+				print(reminderTime)
+			elif 'am' in answer:
+				reminderTime = self.checkTime(answer, language)
+			elif 'pm' in answer:
+				reminderTime = self.checkTime(answer, language)
+			elif 'In' in answer:
+				allGood = False
+				matches = re.search("In ([\w]+)? ([\w]+)?", answer)
+				if matches.group(2) == "minuto" or matches.group(2) == "minuti" or matches.group(2) == "Minuto" or matches.group(2) == "Minuti":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 60
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 60
+						allGood = True
+
+				elif matches.group(2) == "ora" or matches.group(2) == "ore" or matches.group(2) == "Ora" or matches.group(2) == "Ore":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 3600
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 3600
+						allGood = True
+
+				elif matches.group(2) == "giorno" or matches.group(2) == "giorni" or matches.group(2) == "Giorno" or matches.group(2) == "Giorni":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 86400
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 86400
+						allGood = True
+
+				elif matches.group(2) == "settimana" or matches.group(2) == "settimane" or matches.group(2) == "Settimana" or matches.group(2) == "Settimane":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 604800
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 604800
+						allGood = True
+
+				if allGood == True:
+					reminderTime = datetime.now(timezone(self.connection.assistant.timeZoneId)) + timedelta(days=0, seconds=secondsToAdd)
+				else:
+					self.say("Formati accettati \"3 PM,\" o \"10 minuti\" sono accettati.")
+					self.setReminder(speech, language, regex)
+			
+			elif "minuto" in answer or "minuti" in answer or "ora" in answer or "ore" in answer or "giorno" in answer or "giorni" in answer or "settimana" in answer or "settimane" in answer or "Minuto" in answer or "Minuti" in answer or "Ora" in answer or "Ore" in answer or "Giorno" in answer or "Giorni" in answer or "Settimana" in answer or "Settimane" in answer:
+				allGood = False
+				matches = re.search("([\w]+)? ([\w]+)?", answer)
+				if matches.group(2) == "minuto" or matches.group(2) == "minuti" or matches.group(2) == "Minuto" or matches.group(2) == "Minuti":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 60
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 60
+						allGood = True
+
+				elif matches.group(2) == "ora" or matches.group(2) == "ore" or matches.group(2) == "Ora" or matches.group(2) == "Ore":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 3600
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 3600
+						allGood = True
+
+				elif matches.group(2) == "giorno" or matches.group(2) == "giorni" or matches.group(2) == "Giorno" or matches.group(2) == "Giorni":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 86400
+						allGood = True
+					elif matches.group(1) == "un" or matches.group(1) == "una" or matches.group(1) == "Un" or matches.group(1) == "Una":
+						secondsToAdd = 86400
+						allGood = True
+
+				elif matches.group(2) == "settimana" or matches.group(2) == "settimane" or matches.group(2) == "Settimana" or matches.group(2) == "Settimane":
+					if matches.group(1).isdigit():
+						secondsToAdd = int(matches.group(1)) * 604800
+						allGood = True
+					elif matches.group(1) == "a" or matches.group(1) == "an" or matches.group(1) == "A" or matches.group(1) == "An":
+						secondsToAdd = 604800
+						allGood = True
+				
+				if allGood == True:
+					reminderTime = datetime.now(timezone(self.connection.assistant.timeZoneId)) + timedelta(days=0, seconds=secondsToAdd)
+				else:
+					self.say("Formati accettati \"3 PM,\" o \"10 minuti\" sono accettati.")
+					self.setReminder(speech, language, regex)
+			else:
+				self.say("Formati accettati \"3 PM,\" o \"10 minuti\" sono accettati.")
+				self.setReminder(speech, language, regex)
+		update = self.updateReminder(reminderTime, amos, language)
+		if update == amos:
+			utterance = self.confirmReminderTime(subject, reminderTime, amos, language)
+			if utterance == "Conferma" or utterance == "Si":
+				xamos = self.getXamos(subject,reminderTime,amos, language)
+				lists = self.getLists(xamos)
+				timetrigger = ReminderDateTimeTrigger()
+				timetrigger.date = reminderTime
+				snippetData = ReminderObject()
+				snippetData.subject = subject
+				snippetData.dueDate = reminderTime
+				snippetData.dueDateTimeZoneId = self.connection.assistant.timeZoneId
+				snippetData.trigger = timetrigger
+				snippetData.identifier = xamos
+				snippetData.lists = lists
+				snippet = ReminderSnippet()
+				snippet.reminders = [snippetData]
+				end = UIAddViews(self.refId)
+				end.dialogPhase="Confirmed"
+				assistant = UIAssistantUtteranceView()
+				assistant.text = assistant.speakableText = u"Ok, te lo ricorderò!"
+				assistant.dialogIdentifier="Reminders#created"
+				end.views = [assistant,snippet]
+				self.sendRequestWithoutAnswer(end)
+				self.complete_request()
+			else:
+				self.say(u"Ok, non te lo ricorderò.")
+		self.complete_request()
