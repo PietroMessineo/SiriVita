@@ -1,0 +1,32 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Code by Javik
+# Update by @FreeManRepo
+
+import re
+import uuid
+
+from plugin import *
+
+from siriObjects.baseObjects import *
+from siriObjects.uiObjects import *
+from siriObjects.systemObjects import *
+from siriObjects.contactObjects import *
+
+class meCard(Plugin):
+	
+	@register("it-IT", "(Chi sono.*)|(Qual e' il mio nome.*)")
+	def mePerson(self, speech, language):
+		
+		self.say("Tu sei {0}, questo Ë quello che mi hai detto.".format(self.user_name()))		
+		
+		person_search = PersonSearch(self.refId)
+		person_search.scope = PersonSearch.ScopeLocalValue
+		person_search.me = "true"        
+		person_return = self.getResponseForRequest(person_search)
+		person_ = person_return["properties"]["results"]
+		mecard = PersonSnippet(persons=person_)
+		view = AddViews(self.refId, dialogPhase="Completion")		
+		view.views = [mecard]
+		self.sendRequestWithoutAnswer(view)
+		self.complete_request()
